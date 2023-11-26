@@ -378,12 +378,72 @@ Hue is the Failure Type""")
                        feat_choices = st.multiselect("Choose a feature : ",all_columns)
                        new_df = df[feat_choices]
                        st.area_chart(new_df)
+                    
+                    
+                    df2=pd.read_csv("output.csv")
 
+                    col40,col41=st.columns(2)
 
+                    with col40:
+                      st.subheader("Before SMOTEKomek Technique")
+
+                      df1_x = pd.DataFrame(df2)
+                      df1_x["Type"].replace({0:"H",1:"L",2:"M"}, inplace=True)
+                      df1_y["Failure Type"].replace({0:"No Failure",1:"Heat Dissipation Failure",2:"Power Failure",3:"Overstrain Failure",4:"Tool Wear Failure",5:"Random Failures"},inplace=True)
+                      
+
+                      failure_type_counts = df2["Failure Type"].value_counts()
+
+                      # Labels for the legend
+                      labels = ['No Failure', 'Overstrain Failure', 'Heat Dissipation Failure', 'Power Failure', 'Random Failures', 'Tool Wear Failure']
+
+                      # Plotting a bar chart
+                      plt.figure(figsize=(10, 5))  # Adjust the figure size here
+                      plt.bar(labels, failure_type_counts)
+
+                      # Adding data labels on the bars
+                      for i in range(len(failure_type_counts)):
+                       plt.text(i, failure_type_counts[i] + 50, f"{failure_type_counts[i]}", ha='center')
+
+                      plt.xlabel('Failure Type')
+                      plt.ylabel('Count')
+                      plt.title('Distribution of Failure Types After applying SMOTETomek')
+                      plt.xticks(rotation=45)
+                      plt.tight_layout()
+
+                      # Save the plot as an image
+                      plot_smot=plt.savefig('failure_types_distribution.png')
+                      st.pyplot.show(plot_smot)
+                    
                   
 
                 elif activity=="Prediction":
-                    if st.button("Predict"):
+                    
+                     st.title("Predective Analytics")    
+                     st.subheader("1.) Machine Type/Quality (L = Low, M = Medium and H = High qualities)")
+                     type = st.radio("choose according to your machine quality :- ",tuple(type_dict.keys())) 
+                     st.subheader("2.) Air Temprature (in Kelvin)")
+                     st.info("The maximum and the minimum values of air temprature in the dataset are 304.40, 295.30")
+                     air_temp = st.number_input("Enter the Air Temprature :-")
+                     st.subheader("3.) Process Temprature (in Kelvin)")
+                     st.info("The maximum and the minimum values of Process temprature in the dataset are 313.80, 305.70 ")
+                     process_temp = st.number_input("Enter the Process Temprature :-")
+                     st.subheader("4.) Rotational speed (in rotations per miniute (rpm))")
+                     st.info("The maximum and the minimum values of Rotational speed in the dataset are 2886.00, 1168.00. ")
+                     rotation = st.number_input("Enter the Rotational speed :-")
+                     st.subheader("5.)Torque  (in Newton per meter(Nm))")
+                     st.info("The maximum and the minimum values of Torque in the dataset are 76.600, 35.469573. ")
+                     torque = st.number_input("Enter Torque:-")
+                     st.subheader("6.)Tool wear  (in miniutes (min))")
+                     st.info("The maximum and the minimum values of Tool wear in the dataset are 253.00, 0.00. ")
+                     tool_wear = st.number_input("Enter Tool wear:-")
+                     feature_list = [type_dict_get(type,type_dict),air_temp,process_temp,rotation,torque,tool_wear]
+                     st.write(feature_list)
+                     pretty_result = {"type":type,"Air Temprature":air_temp,"Process Temprature":process_temp,"Rotational Speed":rotation,"Torque":torque,"Tool Wear":tool_wear}
+                     st.json(pretty_result)
+                     single_data = np.array(feature_list).reshape(1,-1)
+                     model_choice = st.selectbox("Select Model",["Random Forest","LightGBM","XGBClassifier","Catboost","OneVsRestClassifier","OneVsOneClassifier"])
+                     if st.button("Predict"):
                       if model_choice=="Random Forest" :
                        loaded_model=load_model('RandomForest.py')
                        prediction = loaded_model.predict(single_data)
