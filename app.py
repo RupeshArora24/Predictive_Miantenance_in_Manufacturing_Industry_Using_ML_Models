@@ -4,7 +4,6 @@ import numpy as np
 import pickle
 import pandas as pd
 import matplotlib.pyplot as plt
-import re
 import hashlib
 import joblib
 import os
@@ -13,7 +12,7 @@ from database import *
 #from RandomForest import df2
 
 from PIL import Image
-
+from validations import *
 
 #pickle_ran=open("random_class.pkl","rb")
 
@@ -40,13 +39,6 @@ def load_model(model_file):
    loaded_model = joblib.load(open(os.path.join(model_file),"rb")) 
    return loaded_model     
 
-def validate_password(password):
-    return len(password) > 5
-
-def validate_email(email):
-    email_format = re.compile(r"[^@]+@[^@]+\.[^@]+")
-    return bool(re.match(email_format, email))
- 
 
 image = Image.open('PREDICTIVE-MAINTENANCE.jpg')
 
@@ -377,7 +369,7 @@ Hue is the Failure Type""")
 # Save the figure to a temporary file
                      fig.savefig('heatmap.png')
 
-# Display the saved figure in the Streamlit app
+# Display the saved figure in the Streamlit app 
                     st.image('heatmap.png', width=1000, output_format='PNG', channels='BGR')
                     
                     st.subheader("Area Chart")
@@ -391,31 +383,6 @@ Hue is the Failure Type""")
                   
 
                 elif activity=="Prediction":
-                    st.title("Predective Analytics")    
-                    st.subheader("1.) Machine Type/Quality (L = Low, M = Medium and H = High qualities)")
-                    type = st.radio("choose according to your machine quality :- ",tuple(type_dict.keys())) 
-                    st.subheader("2.) Air Temprature (in Kelvin)")
-                    st.info("The maximum and the minimum values of air temprature in the dataset are 304.40, 295.30")
-                    air_temp = st.number_input("Enter the Air Temprature :-")
-                    st.subheader("3.) Process Temprature (in Kelvin)")
-                    st.info("The maximum and the minimum values of Process temprature in the dataset are 313.80, 305.70 ")
-                    process_temp = st.number_input("Enter the Process Temprature :-")
-                    st.subheader("4.) Rotational speed (in rotations per miniute (rpm))")
-                    st.info("The maximum and the minimum values of Rotational speed in the dataset are 2886.00, 1168.00. ")
-                    rotation = st.number_input("Enter the Rotational speed :-")
-                    st.subheader("5.)Torque  (in Newton per meter(Nm))")
-                    st.info("The maximum and the minimum values of Torque in the dataset are 76.600, 35.469573. ")
-                    torque = st.number_input("Enter Torque:-")
-                    st.subheader("6.)Tool wear  (in miniutes (min))")
-                    st.info("The maximum and the minimum values of Tool wear in the dataset are 253.00, 0.00. ")
-                    tool_wear = st.number_input("Enter Tool wear:-")
-                    
-                    feature_list = [type_dict_get(type,type_dict),air_temp,process_temp,rotation,torque,tool_wear]
-                    st.write(feature_list)
-                    pretty_result = {"type":type,"Air Temprature":air_temp,"Process Temprature":process_temp,"Rotational Speed":rotation,"Torque":torque,"Tool Wear":tool_wear}
-                    st.json(pretty_result)
-                    single_data = np.array(feature_list).reshape(1,-1)
-                    model_choice = st.selectbox("Select Model",["Random Forest","LightGBM","XGBClassifier","Catboost","OneVsRestClassifier","OneVsOneClassifier"])
                     if st.button("Predict"):
                       if model_choice=="Random Forest" :
                        loaded_model=load_model('RandomForest.py')
@@ -433,37 +400,23 @@ Hue is the Failure Type""")
 
 
 
-
-
-
-
-
 elif choice == "SignUp":
      New_email = st.sidebar.text_input("Email")
      New_Username=st.sidebar.text_input("Username")
-     New_Password=st.sidebar.text_input("Password",type='password')
-     
+     New_Password=st.sidebar.text_input("Password",type='password') 
      Confirm_Password=st.sidebar.text_input("Confirm Password",type='password')
-     if New_Password==Confirm_Password:
-          st.success("Pasword Matched")
-     else:
-         st.warning("Password no the same, re-enter the password")
+     operations_on_password_email(New_Password,Confirm_Password,New_email,New_Username) 
+     create_usertable()  
 
-     if st.button("Submit"):
-         create_usertable()
+     if st.sidebar.button("Submit") :
 
-         if not validate_password(New_Password):
-            st.error('Password should be more than 5 characters')
-            if not validate_email(New_email):
-              st.error('Enter a valid email address')
-                   
-         else:
-              
-              if singup(New_email,New_Username,New_Password):
+       if operations_on_password_email(New_Password,Confirm_Password,New_email,New_Username)==3:
+          
+         if view(New_email,New_Username,New_Password):
           
                 add_userdata(New_email,New_Username,New_Password)
                 st.success("You have successfully created a new account")  
                 st.info("Login to get Started")
   
-              else:
+         else:
                st.info("Account Alredy exsists.") 

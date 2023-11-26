@@ -9,6 +9,7 @@ def create_usertable():
 def add_userdata(email,username,Password):
     conn = sqlite3.connect('userdata.db',check_same_thread=False)
     c = conn.cursor() #c = conn.cursor(): This line of code creates a cursor object c that you can use to interact with the database associated with the conn connection
+    
     c.execute('INSERT INTO usertable1 VALUES (?,?,?)',(email,username,Password))
     conn.commit()
     conn.close()
@@ -23,15 +24,15 @@ def login_user(email,username,Password):
     else:
         return True 
     
-def singup(email,username,Password):
+def view(email,username,Password):
     conn = sqlite3.connect('userdata.db',check_same_thread=False)
     c = conn.cursor()     
     c.execute('SELECT * FROM usertable1 WHERE email=? AND username=? AND Password=?',(email,username,Password))
     data = c.fetchall()
     if data==None :
-        return False
-    else :
         return True
+    else :
+        return False
 
 
 def view_all_users():
@@ -40,3 +41,6 @@ def view_all_users():
     c.execute('select * from usertable1')
     data = c.fetchall() # #The c.fetchall() method is used in Python with database cursor objects to retrieve a multiple row of the result set obtained from executing a SQL query.
     return data 
+
+
+    
