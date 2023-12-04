@@ -5,6 +5,7 @@ import pickle
 import pandas as pd
 import matplotlib.pyplot as plt
 import hashlib
+from sklearn.model_selection import train_test_split
 import joblib
 import os
 #db
@@ -14,7 +15,10 @@ from database import *
 from PIL import Image
 from validations import *
 
-#pickle_ran=open("random_class.pkl","rb")
+
+
+pickle_ran=open("Random_forest.pkl","rb")
+classifier1=pickle.load(pickle_ran)
 
 
 
@@ -28,9 +32,9 @@ from validations import *
 
 #quality dictionary 
 type_dict = {"L":0,"M":1,"H":2}
-def type_dict_get(val,my_dict):
+def type_dict_get(val,type_dict):
    for key,value in type_dict.items():
-      if val==key:
+      if key==value:
          return value
       
 
@@ -319,15 +323,17 @@ elif choice == "Login":
             result = login_user(email,username,Password)
             #if Password == "12345":
             if result:
+                
                 st.success("Welcome {}".format(username))
                 activity = st.selectbox("Activity",submenu)
                 if activity=="Plot" :
+                    st.balloons()
                     st.header("Data Visualization")
             
                     #shocasing of database
                     with st.container(): 
                      df = pd.read_csv("predictive_maintenance.csv")
-                     st.subheader("Database Used")
+                     st.subheader("Dataset Used")
                      st.dataframe(df)
 
                     #total failure counts 
@@ -379,15 +385,67 @@ Hue is the Failure Type""")
                        new_df = df[feat_choices]
                        st.area_chart(new_df)
                     
+
+
+
+
+
+                    # Training of smotet omek dataset
+
+                    df.drop(['Product ID',"UDI","Target"], axis=1, inplace=True)
+                    df["Failure Type"].replace({"No Failure": 0,"Heat Dissipation Failure": 1,"Power Failure": 2,"Overstrain Failure": 3,"Tool Wear Failure": 4,"Random Failures": 5},inplace=True)
+                    df["Type"].replace({"H":0,"L":1,"M":2}, inplace=True)
+                    col_name=df.columns.to_list()
+                    predictive_columns = col_name[0:6]
+                    X = df[predictive_columns]
+                    y = df["Failure Type"]
+
+                    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=40, test_size=0.33, stratify=y)
                     
+                    #second dataset 
                     df2=pd.read_csv("output.csv")
 
-                    col40,col41=st.columns(2)
+                    from imblearn.combine import SMOTETomek
+                    smote = SMOTETomek(random_state=42)
+                    X1_res, y1_res = smote.fit_resample(X_train,y_train)
+                    
+                    df1_y = pd.DataFrame(y1_res)
+                    df1_y["Failure Type"].replace({0:"No Failure",1:"Heat Dissipation Failure",2:"Power Failure",3:"Overstrain Failure",4:"Tool Wear Failure",5:"Random Failures"},inplace=True)
+                    df1_x = pd.DataFrame(df2)
+                    df2 = pd.concat([df1_x,df1_y], axis=1)
+                    
+                    col41,col40=st.columns(2,gap="large")
+                    
+                    with col41 :
+                       
+                       st.subheader("After SMOTEKomek Technique")
+                       failure_type_counts = df["Failure Type"].value_counts()
+
+                       # Labels for the legend
+                       labels = ['No Failure', 'Overstrain Failure', 'Heat Dissipation Failure', 'Power Failure', 'Random Failures', 'Tool Wear Failure']
+ 
+                       # Plotting a bar chart
+                       plt.figure(figsize=(10, 5))  # Adjust the figure size here
+                       plt.bar(labels, failure_type_counts)
+
+                       # Adding data labels on the bars
+                       for i in range(len(failure_type_counts)):
+                          plt.text(i, failure_type_counts[i] + 50, f"{failure_type_counts[i]}", ha='center')
+
+                       plt.xlabel('Failure Type')
+                       plt.ylabel('Count')
+                       plt.title('Distribution of Failure Types Before applying SMOTETomek')
+                       plt.xticks(rotation=45)
+                       plt.tight_layout()
+                       st.pyplot(plt)
+
+                       st.subheader('Summary Statistics')
+                       st.write(df.describe())
 
                     with col40:
-                      st.subheader("Before SMOTEKomek Technique")
+                      st.subheader("After SMOTEKomek Technique")
 
-                      df1_x = pd.DataFrame(df2)
+                      
                       df1_x["Type"].replace({0:"H",1:"L",2:"M"}, inplace=True)
                       df1_y["Failure Type"].replace({0:"No Failure",1:"Heat Dissipation Failure",2:"Power Failure",3:"Overstrain Failure",4:"Tool Wear Failure",5:"Random Failures"},inplace=True)
                       
@@ -410,15 +468,20 @@ Hue is the Failure Type""")
                       plt.title('Distribution of Failure Types After applying SMOTETomek')
                       plt.xticks(rotation=45)
                       plt.tight_layout()
+         
+                      
+                      st.pyplot(plt)
+                      st.subheader('Summary Statistics')
+                      st.write(df2.describe())
 
-                      # Save the plot as an image
-                      plot_smot=plt.savefig('failure_types_distribution.png')
-                      st.pyplot.show(plot_smot)
+                      #Dataset after prediction 
+                    st.subheader("Dataset After SMOTETomek")
+                    st.dataframe(df2)
                     
                   
 
                 elif activity=="Prediction":
-                    
+                     
                      st.title("Predective Analytics")    
                      st.subheader("1.) Machine Type/Quality (L = Low, M = Medium and H = High qualities)")
                      type = st.radio("choose according to your machine quality :- ",tuple(type_dict.keys())) 
@@ -437,17 +500,24 @@ Hue is the Failure Type""")
                      st.subheader("6.)Tool wear  (in miniutes (min))")
                      st.info("The maximum and the minimum values of Tool wear in the dataset are 253.00, 0.00. ")
                      tool_wear = st.number_input("Enter Tool wear:-")
+
+
                      feature_list = [type_dict_get(type,type_dict),air_temp,process_temp,rotation,torque,tool_wear]
                      st.write(feature_list)
                      pretty_result = {"type":type,"Air Temprature":air_temp,"Process Temprature":process_temp,"Rotational Speed":rotation,"Torque":torque,"Tool Wear":tool_wear}
                      st.json(pretty_result)
                      single_data = np.array(feature_list).reshape(1,-1)
+
+                     #choosing the moel
                      model_choice = st.selectbox("Select Model",["Random Forest","LightGBM","XGBClassifier","Catboost","OneVsRestClassifier","OneVsOneClassifier"])
+                    
+                    
+                     inputs=[[type,air_temp,process_temp,rotation,torque,tool_wear]]
+                    
                      if st.button("Predict"):
                       if model_choice=="Random Forest" :
-                       loaded_model=load_model('RandomForest.py')
-                       prediction = loaded_model.predict(single_data)
-                       st.write(prediction)
+                       result=classifier1.predict(inputs)[0]
+                       st.success('Result of Random forest : {}'.format(result))
                     #Model of ml
 
                     
